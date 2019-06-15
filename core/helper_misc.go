@@ -18,6 +18,25 @@ func PrintErr(err error) bool {
 	return err != nil
 }
 
-func prettyTime(t time.Time) string {
+func PrettyTime(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
+}
+
+func In(a interface{}, arr ...interface{}) bool {
+	for _, x := range arr {
+		// TODO https://stackoverflow.com/questions/34245932/checking-equality-of-interface
+		if a == x {
+			return true
+		}
+	}
+	return false
+}
+
+func InStrArr(a string, arr ...string) bool {
+	for _, x := range arr {
+		if a == x {
+			return true
+		}
+	}
+	return false
 }
