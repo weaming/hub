@@ -17,7 +17,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type WebSocket struct {
-	*sync.Mutex
+	sync.Mutex
 	key     string
 	conn    *websocket.Conn
 	req     *http.Request
@@ -31,6 +31,7 @@ func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 		key:     fmt.Sprintf("%v", conn),
 		conn:    conn,
 		req:     r,
+		Topics:  []string{},
 		ErrChan: make(chan error, 1),
 	}
 	if err != nil {
@@ -68,49 +69,70 @@ func (p *WebSocket) Pub(topic string, msg *Message) {
 }
 
 func (p *WebSocket) Send(msg *Message) {
+	bytes := ToJSON(ReqResMessage{
+		Type: msg.Type,
+		Data: msg.Data,
+	})
+	err := p.WriteSafe(bytes)
+	if err != nil {
+		p.ErrChan <- err
+	}
+}
+
+func (p *WebSocket) WriteSafe(bytes []byte) error {
 	p.Lock()
 	defer p.Unlock()
-	// TODO
+	return p.conn.WriteMessage(websocket.TextMessage, bytes)
 }
 
 func (p *WebSocket) ProcessMessage() {
 	for {
-		messageType, msg, err := p.conn.ReadMessage()
-		if err != nil {
-			p.ErrChan <- err
+		messageType, msg, e := p.conn.ReadMessage()
+		if e != nil {
+			p.ErrChan <- e
 			return
 		}
 
-		var data map[string]interface{}
+		var data interface{}
+		var err error
+
 		switch messageType {
 		case websocket.TextMessage:
-			// SUB
-			// TODO
-			data = map[string]interface{}{
-				"ok":  true,
-				"msg": fmt.Sprintf("subscribed topic %s", string(msg)),
-			}
-
-			// PUB
-			// TODO
-			data = map[string]interface{}{
-				"ok":  true,
-				"msg": fmt.Sprintf("published on topic %s", string(msg)),
+			clientMsg, e := UnmarshalClientMessage(msg)
+			if e != nil {
+				err = e
+			} else {
+				data, err = clientMsg.Process(p)
 			}
 		case websocket.BinaryMessage:
-			data = map[string]interface{}{
-				"ok":  false,
-				"msg": "binary message is not supported",
-			}
+			err = fmt.Errorf("binary message is not supported")
 		}
 
-		// send back
-		jData, err := json.Marshal(data)
-		FatalErr(err)
-		// conn maybe have been closed by manual or client
-		if err := p.conn.WriteMessage(websocket.TextMessage, jData); err != nil {
+		jData := genResponseData(data, err)
+		err = p.WriteSafe(jData)
+		if err != nil {
 			p.ErrChan <- err
+			// conn maybe have been closed by manual or client
 			return
 		}
 	}
+}
+
+func genResponseData(data interface{}, err error) []byte {
+	var respData map[string]interface{}
+	if err != nil {
+		respData = map[string]interface{}{
+			"success": false,
+			"data":    err.Error(),
+		}
+	} else {
+		respData = map[string]interface{}{
+			"success": true,
+			"data":    data,
+		}
+	}
+
+	jData, err := json.Marshal(respData)
+	FatalErr(err)
+	return jData
 }

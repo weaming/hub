@@ -21,3 +21,12 @@ func PostJSON(api string, data map[string]interface{}) (map[string]interface{}, 
 	json.NewDecoder(resp.Body).Decode(&result)
 	return result, nil
 }
+
+func ToJSON(a interface{}) []byte {
+	if a == nil {
+		return []byte("{}")
+	}
+	bytes, err := json.Marshal(a)
+	FatalErr(err)
+	return bytes
+}

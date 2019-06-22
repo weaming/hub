@@ -1,7 +1,9 @@
 package core
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -39,4 +41,8 @@ func InStrArr(a string, arr ...string) bool {
 		}
 	}
 	return false
+}
+
+func StrArr2Str(arr []string) string {
+	return fmt.Sprintf("[%s]", strings.Join(arr, ", "))
 }
