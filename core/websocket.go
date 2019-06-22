@@ -17,17 +17,17 @@ var upgrader = websocket.Upgrader{
 
 type WebSocket struct {
 	sync.Mutex
-	key     string
 	conn    *websocket.Conn
 	req     *http.Request
-	Topics  []string
-	ErrChan chan error
+	Key     string     `json:"key"`
+	Topics  []string   `json:"topics"`
+	ErrChan chan error `json:"-"`
 }
 
 func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	rv := &WebSocket{
-		key:     fmt.Sprintf("%v", conn),
+		Key:     Sha256([]byte(fmt.Sprintf("%+v", conn))),
 		conn:    conn,
 		req:     r,
 		Topics:  []string{},

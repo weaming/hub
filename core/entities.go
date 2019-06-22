@@ -45,19 +45,19 @@ func (p *Message) Str() string {
 
 type Topic struct {
 	sync.RWMutex
-	Topic     string
-	Subs      map[string]*WebSocket
-	Pubs      map[string]*WebSocket
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Close     chan (bool)
+	Topic     string                `json:"topic"`
+	Subs      map[string]*WebSocket `json:"subs"`
+	Pubs      map[string]*WebSocket `json:"pubs"`
+	CreatedAt time.Time             `json:"created_at"`
+	UpdatedAt time.Time             `json:"updated_at"`
+	Close     chan (bool)           `json:"-"`
 }
 
 func (p *Topic) Sub(ws *WebSocket) {
 	p.Lock()
 	defer p.Unlock()
-	if _, ok := p.Subs[ws.key]; !ok {
-		p.Subs[ws.key] = ws
+	if _, ok := p.Subs[ws.Key]; !ok {
+		p.Subs[ws.Key] = ws
 		p.UpdatedAt = time.Now()
 	}
 }
@@ -68,8 +68,8 @@ func (p *Topic) Pub(msg *Message) {
 
 	if msg.SourceWS != nil {
 		ws := msg.SourceWS
-		if _, ok := p.Pubs[ws.key]; !ok {
-			p.Pubs[ws.key] = ws
+		if _, ok := p.Pubs[ws.Key]; !ok {
+			p.Pubs[ws.Key] = ws
 			p.UpdatedAt = time.Now()
 		}
 	}
@@ -92,7 +92,7 @@ func (p *Topic) Pub(msg *Message) {
 
 type Hub struct {
 	sync.Mutex
-	Topics map[string]*Topic
+	Topics map[string]*Topic `json:"topics"`
 }
 
 func (p *Hub) GetTopic(topic string) *Topic {

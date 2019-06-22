@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"strings"
@@ -45,4 +46,8 @@ func InStrArr(a string, arr ...string) bool {
 
 func StrArr2Str(arr []string) string {
 	return fmt.Sprintf("[%s]", strings.Join(arr, ", "))
+}
+
+func Sha256(content []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(content))
 }

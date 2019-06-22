@@ -40,6 +40,11 @@ func HTTPHandler(w http.ResponseWriter, req *http.Request) {
 	w.Write(genResponseData(data, err))
 }
 
+func StatusHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(genResponseData(HUB, nil))
+}
+
 func ServeHub(listen string) {
 	log.Printf("serve http on %s", listen)
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -48,6 +53,7 @@ func ServeHub(listen string) {
 
 	http.HandleFunc("/http", HTTPHandler)
 	http.HandleFunc("/ws", WSHandler)
+	http.HandleFunc("/status", StatusHandler)
 
 	err := http.ListenAndServe(listen, nil)
 	FatalErr(err)
