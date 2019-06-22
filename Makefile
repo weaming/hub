@@ -1,2 +1,2 @@
 install:
-	go install -race ./cmd/mesasge-hub
+	go install -race ./cmd/message-hub
