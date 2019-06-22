@@ -16,10 +16,17 @@ var HUB = &Hub{
 
 type MessageType string
 
+// representation of internal messages
 const (
 	MessageTypePlain MessageType = "PLAIN"
 	MessageTypeHTML  MessageType = "HTML"
 	MessageTypeImage MessageType = "IMAGE"
+)
+
+// representation of websocket messages
+const (
+	MTFeedback MessageType = "FEEDBACK"
+	MTResponse MessageType = "RESPONSE"
 )
 
 type Message struct {
@@ -67,11 +74,19 @@ func (p *Topic) Pub(msg *Message) {
 		}
 	}
 
+	c := 0
 	for _, sub := range p.Subs {
 		// do not send back to self
 		if sub != msg.SourceWS {
 			go sub.Send(msg)
+			c++
 		}
+	}
+	if msg.SourceWS != nil {
+		msg.SourceWS.WriteSafe(ToJSON(map[string]string{
+			"type":    "FEEDBACK",
+			"message": fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, p.Topic),
+		}))
 	}
 }
 
@@ -172,7 +187,6 @@ func (p *ClientMessage) Process(ws *WebSocket) (m string, err error) {
 		for _, topic := range topics {
 			ws.Pub(topic, msg)
 		}
-		fmt.Println(message)
 		return fmt.Sprintf("published on topic %s", topicsStr), nil
 	case ACTION_SUB:
 		log.Printf("subscribed topics %s", topicsStr)

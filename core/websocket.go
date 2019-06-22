@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -116,23 +115,4 @@ func (p *WebSocket) ProcessMessage() {
 			return
 		}
 	}
-}
-
-func genResponseData(data interface{}, err error) []byte {
-	var respData map[string]interface{}
-	if err != nil {
-		respData = map[string]interface{}{
-			"success": false,
-			"data":    err.Error(),
-		}
-	} else {
-		respData = map[string]interface{}{
-			"success": true,
-			"data":    data,
-		}
-	}
-
-	jData, err := json.Marshal(respData)
-	FatalErr(err)
-	return jData
 }
