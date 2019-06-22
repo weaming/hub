@@ -47,6 +47,7 @@ func (p *WebSocket) ProcessError() {
 		if err != nil {
 			log.Printf("[WebSocet] %v", err)
 			p.Close()
+			HUB.removeWS(p)
 			return
 		}
 	}
@@ -60,6 +61,10 @@ func (p *WebSocket) Sub(topic string) {
 	if !InStrArr(topic, p.Topics...) {
 		p.Topics = append(p.Topics, topic)
 		HUB.Sub(topic, p)
+		p.WriteSafe(ToJSON(map[string]string{
+			"type":    "FEEDBACK",
+			"message": fmt.Sprintf(`subscribed on topic "%s"`, topic),
+		}))
 	}
 }
 
@@ -67,10 +72,14 @@ func (p *WebSocket) Pub(topic string, msg *Message) {
 	HUB.Pub(topic, msg)
 }
 
-func (p *WebSocket) Send(msg *Message) {
-	bytes := ToJSON(ReqResMessage{
-		Type: msg.Type,
-		Data: msg.Data,
+func (p *WebSocket) Send(msg *Message, topic string) {
+	bytes := ToJSON(map[string]interface{}{
+		"type":  MTMessage,
+		"topic": topic,
+		"message": ReqResMessage{
+			Type: msg.Type,
+			Data: msg.Data,
+		},
 	})
 	err := p.WriteSafe(bytes)
 	if err != nil {
@@ -107,9 +116,7 @@ func (p *WebSocket) ProcessMessage() {
 			err = fmt.Errorf("binary message is not supported")
 		}
 
-		jData := genResponseData(data, err)
-		err = p.WriteSafe(jData)
-		if err != nil {
+		if err = p.WriteSafe(genResponseData(data, err)); err != nil {
 			p.ErrChan <- err
 			// conn maybe have been closed by manual or client
 			return

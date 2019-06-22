@@ -14,19 +14,22 @@ var HUB = &Hub{
 	Topics: map[string]*Topic{},
 }
 
+const GlobalTopicID = "global"
+
 type MessageType string
 
 // representation of internal messages
 const (
-	MessageTypePlain MessageType = "PLAIN"
-	MessageTypeHTML  MessageType = "HTML"
-	MessageTypeImage MessageType = "IMAGE"
+	MTPlain MessageType = "PLAIN"
+	MTHTML  MessageType = "HTML"
+	MTImage MessageType = "IMAGE"
 )
 
 // representation of websocket messages
 const (
-	MTFeedback MessageType = "FEEDBACK"
-	MTResponse MessageType = "RESPONSE"
+	MTFeedback MessageType = "FEEDBACK" // used for async event feedback
+	MTResponse MessageType = "RESPONSE" // used for message response
+	MTMessage  MessageType = "MESSAGE"  // used for publish messages
 )
 
 type Message struct {
@@ -34,13 +37,6 @@ type Message struct {
 	Data      string      `json:"data"` // string or base64 of bytes
 	SourceReq *http.Request
 	SourceWS  *WebSocket
-}
-
-func (p *Message) Str() string {
-	if In(p.Type, MessageTypePlain, MessageTypeHTML) {
-		return string(p.Data)
-	}
-	return ""
 }
 
 type Topic struct {
@@ -78,7 +74,7 @@ func (p *Topic) Pub(msg *Message) {
 	for _, sub := range p.Subs {
 		// do not send back to self
 		if sub != msg.SourceWS {
-			go sub.Send(msg)
+			go sub.Send(msg, p.Topic)
 			c++
 		}
 	}
@@ -88,6 +84,11 @@ func (p *Topic) Pub(msg *Message) {
 			"message": fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, p.Topic),
 		}))
 	}
+}
+
+func (p *Topic) removeWS(ws *WebSocket) {
+	delete(p.Subs, ws.Key)
+	delete(p.Pubs, ws.Key)
 }
 
 type Hub struct {
@@ -124,25 +125,39 @@ func (p *Hub) Pub(topic string, msg *Message) {
 	tpc.Pub(msg)
 }
 
+func (p *Hub) removeWS(ws *WebSocket) {
+	for _, tpc := range p.Topics {
+		tpc.removeWS(ws)
+	}
+}
+
 // http client message
 
 type ReqResMessage struct {
 	Type MessageType `json:"type"`
 	Data string      `json:"data"`
 }
-type ClientMessage struct {
+
+func (p *ReqResMessage) Str() string {
+	if In(p.Type, MTPlain, MTHTML) {
+		return p.Data
+	}
+	return ""
+}
+
+type Request struct {
 	Action  string        `json:"action"`
 	Topics  []string      `json:"topics"`
 	Message ReqResMessage `json:"message"`
 }
 
 const (
-	ACTION_PUB = "PUB"
-	ACTION_SUB = "SUB"
+	ActionPub = "PUB"
+	ActionSub = "SUB"
 )
 
-func UnmarshalClientMessage(msg []byte) (*ClientMessage, error) {
-	clientMsg := &ClientMessage{}
+func UnmarshalClientMessage(msg []byte) (*Request, error) {
+	clientMsg := &Request{}
 	err := json.Unmarshal(msg, clientMsg)
 	if err != nil {
 		log.Println(err)
@@ -151,7 +166,7 @@ func UnmarshalClientMessage(msg []byte) (*ClientMessage, error) {
 	return clientMsg, nil
 }
 
-func (p *ClientMessage) Process(ws *WebSocket) (m string, err error) {
+func (p *Request) Process(ws *WebSocket) (m string, err error) {
 	// p.Message maybe not nil but dereference fail
 	// defer func() {
 	// 	if r := recover(); r != nil {
@@ -160,16 +175,20 @@ func (p *ClientMessage) Process(ws *WebSocket) (m string, err error) {
 	// }()
 
 	topics := p.Topics
-	topicsStr := StrArr2Str(topics)
+	topicsStr := ReprStrArr(topics...)
 
 	if len(topics) == 0 {
 		return "", errors.New("missing topics")
 	}
 
 	switch p.Action {
-	case ACTION_PUB:
+	case ActionPub:
 		message := p.Message
 		log.Printf("%+v", message)
+		if p.Message.Str() == "" {
+			return "", fmt.Errorf("message data not provided or type is not in %s", ReprArr(MTPlain, MTHTML, MTImage))
+		}
+
 		var msg *Message
 		if ws != nil {
 			msg = &Message{
@@ -187,16 +206,17 @@ func (p *ClientMessage) Process(ws *WebSocket) (m string, err error) {
 		for _, topic := range topics {
 			ws.Pub(topic, msg)
 		}
-		return fmt.Sprintf("published on topic %s", topicsStr), nil
-	case ACTION_SUB:
-		log.Printf("subscribed topics %s", topicsStr)
+		return fmt.Sprintf("publish requests on topics %s are processing", topicsStr), nil
+	case ActionSub:
 		if ws == nil {
-			return "", fmt.Errorf("HTTP does not support action %s", ACTION_SUB)
+			return "", fmt.Errorf("HTTP does not support action %s", ActionSub)
 		}
 		for _, topic := range topics {
 			ws.Sub(topic)
 		}
-		return fmt.Sprintf("subscribed topic %s", topicsStr), nil
+		resText := fmt.Sprintf("subscribe requests on topics %s are processing", topicsStr)
+		log.Println(resText)
+		return resText, nil
 	default:
 		return "", fmt.Errorf("unsupported action %s", p.Action)
 	}

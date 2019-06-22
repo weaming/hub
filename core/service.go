@@ -14,6 +14,8 @@ const (
 
 func WSHandler(w http.ResponseWriter, req *http.Request) {
 	ws := NewWebsocket(w, req)
+	ws.WriteSafe(genResponseData("connected", nil))
+	ws.Sub(GlobalTopicID)
 	go ws.ProcessMessage()
 }
 
