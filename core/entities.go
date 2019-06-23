@@ -21,9 +21,12 @@ type MessageType string
 // representation of internal messages
 const (
 	MTPlain MessageType = "PLAIN"
+	MTJSON  MessageType = "JSON"
 	MTHTML  MessageType = "HTML"
 	MTImage MessageType = "IMAGE"
 )
+
+var MTAll = []MessageType{MTPlain, MTJSON, MTHTML, MTImage}
 
 // representation of websocket messages
 const (
@@ -139,7 +142,7 @@ type ReqResMessage struct {
 }
 
 func (p *ReqResMessage) Str() string {
-	if In(p.Type, MTPlain, MTHTML) {
+	if In(p.Type, MTAll...) {
 		return p.Data
 	}
 	return ""
@@ -186,7 +189,7 @@ func (p *Request) Process(ws *WebSocket) (m string, err error) {
 		message := p.Message
 		log.Printf("%+v", message)
 		if p.Message.Str() == "" {
-			return "", fmt.Errorf("message data not provided or type is not in %s", ReprArr(MTPlain, MTHTML, MTImage))
+			return "", fmt.Errorf("message data not provided or type is not in %s", ReprArr(MTAll...))
 		}
 
 		var msg *Message
