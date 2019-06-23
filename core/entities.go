@@ -16,28 +16,26 @@ var HUB = &Hub{
 
 const GlobalTopicID = "global"
 
-type MessageType string
-
 // representation of internal messages
 const (
-	MTPlain MessageType = "PLAIN"
-	MTJSON  MessageType = "JSON"
-	MTHTML  MessageType = "HTML"
-	MTImage MessageType = "IMAGE"
+	MTPlain string = "PLAIN"
+	MTJSON  string = "JSON"
+	MTHTML  string = "HTML"
+	MTImage string = "IMAGE"
 )
 
-var MTAll = []MessageType{MTPlain, MTJSON, MTHTML, MTImage}
+var MTAll = []string{MTPlain, MTJSON, MTHTML, MTImage}
 
 // representation of websocket messages
 const (
-	MTFeedback MessageType = "FEEDBACK" // used for async event feedback
-	MTResponse MessageType = "RESPONSE" // used for message response
-	MTMessage  MessageType = "MESSAGE"  // used for publish messages
+	MTFeedback string = "FEEDBACK" // used for async event feedback
+	MTResponse string = "RESPONSE" // used for message response
+	MTMessage  string = "MESSAGE"  // used for publish messages
 )
 
 type Message struct {
-	Type      MessageType `json:"type"`
-	Data      string      `json:"data"` // string or base64 of bytes
+	Type      string `json:"type"`
+	Data      string `json:"data"` // string or base64 of bytes
 	SourceReq *http.Request
 	SourceWS  *WebSocket
 }
@@ -137,12 +135,12 @@ func (p *Hub) removeWS(ws *WebSocket) {
 // http client message
 
 type ReqResMessage struct {
-	Type MessageType `json:"type"`
-	Data string      `json:"data"`
+	Type string `json:"type"`
+	Data string `json:"data"`
 }
 
 func (p *ReqResMessage) Str() string {
-	if In(p.Type, MTAll...) {
+	if InStrArr(p.Type, MTAll...) {
 		return p.Data
 	}
 	return ""
@@ -189,7 +187,7 @@ func (p *Request) Process(ws *WebSocket) (m string, err error) {
 		message := p.Message
 		log.Printf("%+v", message)
 		if p.Message.Str() == "" {
-			return "", fmt.Errorf("message data not provided or type is not in %s", ReprArr(MTAll...))
+			return "", fmt.Errorf("message data not provided or type is not in %s", ReprStrArr(MTAll...))
 		}
 
 		var msg *Message
