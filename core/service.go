@@ -50,7 +50,10 @@ func StatusHandler(w http.ResponseWriter, req *http.Request) {
 func ServeHub(listen string) {
 	log.Printf("serve http on %s", listen)
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte("service is healthy"))
+		w.Write(ToJSON(map[string]string{
+			"status":      "service is healthy",
+			"source_code": "https://github.com/weaming/hub",
+		}))
 	})
 
 	http.HandleFunc("/http", HTTPHandler)
