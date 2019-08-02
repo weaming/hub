@@ -18,13 +18,14 @@ const GlobalTopicID = "global"
 
 // representation of internal messages
 const (
-	MTPlain string = "PLAIN"
-	MTJSON  string = "JSON"
-	MTHTML  string = "HTML"
-	MTImage string = "IMAGE"
+	MTPlain    string = "PLAIN"
+	MTMarkdown string = "MARKDOWN"
+	MTJSON     string = "JSON"
+	MTHTML     string = "HTML"
+	MTImage    string = "IMAGE"
 )
 
-var MTAll = []string{MTPlain, MTJSON, MTHTML, MTImage}
+var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTImage}
 
 // representation of websocket messages
 const (

@@ -15,6 +15,7 @@ log = logging.getLogger("hub")
 
 class MESSAGE_TYPE(Enum):
     PLAIN = "PLAIN"
+    MARKDOWN = "MARKDOWN"
     JSON = "JSON"
     HTML = "HTML"
     IMAGE = "IMAGE"
