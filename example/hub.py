@@ -37,7 +37,7 @@ def on_open(ws, bee=None):
     thread.start_new_thread(partial(bee, ws), ())
 
 
-def run_util_close(bee=None, on_msg=None):
+def run_until_close(bee=None, on_msg=None):
     # websocket.enableTrace(True)
     ws = websocket.WebSocketApp(
         "wss://hub.drink.cafe/ws",

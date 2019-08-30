@@ -1,5 +1,5 @@
 import json
-from hub import new_pub_message, run_util_close, MESSAGE_TYPE, http_post_data_to_hub
+from hub import new_pub_message, run_until_close, MESSAGE_TYPE, http_post_data_to_hub
 
 
 data = {"key": "value"}
@@ -19,7 +19,7 @@ def bee(ws):
     ws.send(json.dumps(msg, ensure_ascii=False))
 
 
-run_util_close(bee=bee)
+run_until_close(bee=bee)
 
 
 # or HTTP
