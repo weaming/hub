@@ -45,7 +45,7 @@ func (p *WebSocket) ProcessError() {
 	for {
 		err := <-p.ErrChan
 		if err != nil {
-			log.Printf("[WebSocet] %v", err)
+			log.Printf("[WebSocket] %v", err)
 			p.Close()
 			HUB.removeWS(p)
 			return
