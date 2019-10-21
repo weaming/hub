@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-
-	"github.com/mr-tron/base58"
 )
 
 const (
@@ -57,14 +55,13 @@ func HTTPHandler(w http.ResponseWriter, req *http.Request) {
 		dataBytes := BufGetN(topic, amountN)
 		_data := []string{}
 		for _, x := range dataBytes {
-			s := base58.Encode(x)
+			s := string(x)
 			_data = append(_data, s)
 		}
 
 		data = map[string]interface{}{
-			"data":     _data,
-			"count":    len(_data),
-			"encoding": "base58",
+			"data":  _data,
+			"count": len(_data),
 		}
 		w.Write(genResponseData(data, err))
 		return
