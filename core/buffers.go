@@ -8,15 +8,18 @@ var CMap = NewChannelMap(10000)
 
 func BufPub(topic string, content []byte) (rv bool) {
 	c := *CMap.GetOrNew(topic)
+	c.Lock()
+	defer c.Unlock()
+
 	select {
-	case c <- content:
+	case c.c <- content:
 		return true
 	default:
-		v := <-c
+		v := <-c.c
 		// try again
 		log.Printf("dropped %v\n", string(v))
 		select {
-		case c <- content:
+		case c.c <- content:
 			return true
 		default:
 			return false
@@ -27,9 +30,11 @@ func BufPub(topic string, content []byte) (rv bool) {
 func BufGetN(topic string, maxN int) [][]byte {
 	rv := [][]byte{}
 	c := *CMap.GetOrNew(topic)
+	c.RLock()
+	defer c.RUnlock()
 	for i := 1; i <= maxN; i++ {
 		select {
-		case v := <-c:
+		case v := <-c.c:
 			rv = append(rv, v)
 		default:
 			goto end

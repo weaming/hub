@@ -1,37 +1,48 @@
 package core
 
-type Channeler interface {
-	GetChannel() *chan []byte
+import "sync"
+
+type ChannelMapper interface {
+	Get(string) *ChanWithLock
+	New(string, int) *ChanWithLock
+	GetOrNew(string) *ChanWithLock
+}
+
+type ChanWithLock struct {
+	sync.RWMutex
+	c chan []byte
 }
 
 type ChannelMap struct {
-	data map[string]*chan []byte
+	data map[string]*ChanWithLock
 	size int
 }
 
-func NewChannelMap(size int) *ChannelMap {
+func NewChannelMap(size int) ChannelMapper {
 	return &ChannelMap{
-		data: map[string]*chan []byte{},
+		data: map[string]*ChanWithLock{},
 		size: size,
 	}
 }
 
-func (p *ChannelMap) Get(k string) *chan []byte {
+func (p *ChannelMap) Get(k string) *ChanWithLock {
 	if v, ok := p.data[k]; ok {
 		return v
 	}
 	return nil
 }
-func (p *ChannelMap) New(k string, n int) *chan []byte {
+
+func (p *ChannelMap) New(k string, n int) *ChanWithLock {
 	if p.Get(k) == nil {
-		v := make(chan []byte, n)
-		p.data[k] = &v
-		return &v
+		c := make(chan []byte, n)
+		v := &ChanWithLock{c: c}
+		p.data[k] = v
+		return v
 	}
 	return nil
 }
 
-func (p *ChannelMap) GetOrNew(k string) *chan []byte {
+func (p *ChannelMap) GetOrNew(k string) *ChanWithLock {
 	if p.Get(k) != nil {
 		return p.Get(k)
 	}
