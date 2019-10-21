@@ -22,6 +22,7 @@ func (p *ReqResMessage) Str() string {
 type Request struct {
 	Action  string        `json:"action"`
 	Topics  []string      `json:"topics"`
+	Subs    []string      `json:"subs"`
 	Message ReqResMessage `json:"message"`
 }
 
@@ -40,7 +41,13 @@ func UnmarshalClientMessage(msg []byte) (*Request, error) {
 	return clientMsg, nil
 }
 
+func (p *Request) Pub(topic string, msg *Message) {
+	HUB.Pub(topic, msg)
+}
+
 func (p *Request) Process(ws *WebSocket) (m string, err error) {
+	// optional ws, nil stands for HTTP client PUBlished a message
+
 	// p.Message maybe not nil but dereference fail
 	// defer func() {
 	// 	if r := recover(); r != nil {
@@ -71,14 +78,19 @@ func (p *Request) Process(ws *WebSocket) (m string, err error) {
 				SourceReq: ws.req,
 				SourceWS:  ws,
 			}
+			for _, topic := range topics {
+				// publish through the ws
+				ws.Pub(topic, msg)
+			}
 		} else {
 			msg = &Message{
 				Type: message.Type,
 				Data: message.Data,
 			}
-		}
-		for _, topic := range topics {
-			ws.Pub(topic, msg)
+			for _, topic := range topics {
+				// message can publish to HUB directly
+				p.Pub(topic, msg)
+			}
 		}
 		return fmt.Sprintf("publish requests on topics %s are processing", topicsStr), nil
 	case ActionSub:

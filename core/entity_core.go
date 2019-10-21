@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -31,6 +32,7 @@ const (
 	MTMessage  string = "MESSAGE"  // used for publish messages
 )
 
+// http client message
 type Message struct {
 	Type      string `json:"type"`
 	Data      string `json:"data"` // string or base64 of bytes
@@ -69,11 +71,15 @@ func (p *Topic) Pub(msg *Message) {
 		}
 	}
 
+	// save into in-memoery buffers
+	success := BufPub(p.Topic, ToJSON(msg))
+	log.Printf("buffered on topic %v, %v %v\n", p.Topic, success, string(ToJSON(msg)))
+
 	c := 0
 	for _, sub := range p.Subs {
 		// do not send back to self
 		if sub != msg.SourceWS {
-			go sub.Send(msg, p.Topic)
+			go sub.send(p.Topic, msg)
 			c++
 		}
 	}
@@ -129,6 +135,3 @@ func (p *Hub) removeWS(ws *WebSocket) {
 		tpc.removeWS(ws)
 	}
 }
-
-// http client message
-

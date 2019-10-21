@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/mr-tron/base58"
 )
 
 const (
@@ -35,8 +38,36 @@ func HTTPHandler(w http.ResponseWriter, req *http.Request) {
 			data, err = clientMsg.Process(nil)
 		}
 	} else {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		err = errors.New("method not allowed")
+		topic := GetQuery(req, "topic")
+		amount := GetQuery(req, "amount")
+		if topic == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(genResponseData(data, errors.New("missing topic")))
+			return
+		}
+		if amount == "" {
+			amount = "10"
+		}
+		amountN, err := strconv.Atoi(amount)
+		if err != nil {
+			w.Write(genResponseData(data, err))
+			return
+		}
+
+		dataBytes := BufGetN(topic, amountN)
+		_data := []string{}
+		for _, x := range dataBytes {
+			s := base58.Encode(x)
+			_data = append(_data, s)
+		}
+
+		data = map[string]interface{}{
+			"data":     _data,
+			"count":    len(_data),
+			"encoding": "base58",
+		}
+		w.Write(genResponseData(data, err))
+		return
 	}
 
 	w.Write(genResponseData(data, err))

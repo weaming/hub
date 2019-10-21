@@ -72,7 +72,8 @@ func (p *WebSocket) Pub(topic string, msg *Message) {
 	HUB.Pub(topic, msg)
 }
 
-func (p *WebSocket) Send(msg *Message, topic string) {
+//  send message to subscribers
+func (p *WebSocket) send(topic string, msg *Message) {
 	bytes := ToJSON(map[string]interface{}{
 		"type":  MTMessage,
 		"topic": topic,
