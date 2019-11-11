@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -17,27 +18,35 @@ var upgrader = websocket.Upgrader{
 
 type WebSocket struct {
 	sync.Mutex
-	conn    *websocket.Conn
-	req     *http.Request
-	Key     string     `json:"key"`
-	Topics  []string   `json:"topics"`
-	ErrChan chan error `json:"-"`
+	conn      *websocket.Conn
+	req       *http.Request
+	Key       string     `json:"key"`
+	Topics    []string   `json:"topics"`
+	ErrChan   chan error `json:"-"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	rv := &WebSocket{
-		Key:     Sha256([]byte(fmt.Sprintf("%+v", conn))),
-		conn:    conn,
-		req:     r,
-		Topics:  []string{},
-		ErrChan: make(chan error, 1),
+		Key:       Sha256([]byte(fmt.Sprintf("%+v", conn))),
+		conn:      conn,
+		req:       r,
+		Topics:    []string{},
+		ErrChan:   make(chan error, 1),
+		CreatedAt: time.Now(),
 	}
 	if err != nil {
 		rv.ErrChan <- err
 	}
 	go rv.ProcessError()
 	go rv.ProcessMessage()
+	// remove from Hub map
+	// conn.SetCloseHandler(func(code int, text string) error {
+	// 	message := websocket.FormatCloseMessage(code, "")
+	// 	conn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+	// 	return nil
+	// })
 	return rv
 }
 
@@ -55,6 +64,21 @@ func (p *WebSocket) ProcessError() {
 
 func (p *WebSocket) Close() {
 	p.conn.Close()
+	for _, t := range p.Topics {
+		p.GC(HUB.GetTopic(t))
+	}
+}
+
+func (p *WebSocket) GC(topic *Topic) {
+	topic.Lock()
+	defer topic.Unlock()
+	for _, arr := range []map[string]*WebSocket{topic.Subs} {
+		for k := range arr {
+			if k == p.Key {
+				delete(arr, p.Key)
+			}
+		}
+	}
 }
 
 func (p *WebSocket) Sub(topic string) {

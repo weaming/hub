@@ -4,7 +4,7 @@ import (
 	"log"
 )
 
-var CMap = NewChannelMap(10000)
+var CMap = NewChannelMap(1000)
 
 func BufPub(topic string, content []byte) (rv bool) {
 	c := *CMap.GetOrNew(topic)
