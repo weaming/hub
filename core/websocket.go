@@ -39,6 +39,7 @@ func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 	if err != nil {
 		rv.ErrChan <- err
 	}
+	// https://godoc.org/github.com/gorilla/websocket#hdr-Concurrency
 	go rv.ProcessError()
 	go rv.ProcessMessage()
 	return rv
