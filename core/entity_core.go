@@ -50,50 +50,60 @@ type Topic struct {
 	Close     chan (bool)           `json:"-"`
 }
 
-func (p *Topic) Sub(ws *WebSocket) {
-	p.Lock()
-	defer p.Unlock()
-	if _, ok := p.Subs[ws.Key]; !ok {
-		p.Subs[ws.Key] = ws
-		p.UpdatedAt = time.Now()
+func (t *Topic) Sub(ws *WebSocket) {
+	t.Lock()
+	defer t.Unlock()
+	if _, ok := t.Subs[ws.Key]; !ok {
+		t.Subs[ws.Key] = ws
+		t.UpdatedAt = time.Now()
 	}
 }
 
-func (p *Topic) Pub(msg *Message) {
-	p.Lock()
-	defer p.Unlock()
+func (t *Topic) Pub(msg *Message) {
+	t.Lock()
+	defer t.Unlock()
 
 	if msg.SourceWS != nil {
 		ws := msg.SourceWS
-		if _, ok := p.Pubs[ws.Key]; !ok {
-			p.Pubs[ws.Key] = ws
-			p.UpdatedAt = time.Now()
+		if _, ok := t.Pubs[ws.Key]; !ok {
+			t.Pubs[ws.Key] = ws
+			t.UpdatedAt = time.Now()
 		}
 	}
 
 	// save into in-memoery buffers
-	success := BufPub(p.Topic, ToJSON(msg))
-	log.Printf("buffered on topic %v, %v %v\n", p.Topic, success, string(ToJSON(msg)))
+	success := BufPub(t.Topic, ToJSON(msg))
+	log.Printf("buffered on topic %v, %v %v\n", t.Topic, success, string(ToJSON(msg)))
 
 	c := 0
-	for _, sub := range p.Subs {
+	for _, sub := range t.Subs {
 		// do not send back to self
 		if sub != msg.SourceWS {
-			go sub.send(p.Topic, msg)
+			go sub.send(t.Topic, msg)
 			c++
 		}
 	}
 	if msg.SourceWS != nil {
 		msg.SourceWS.WriteSafe(ToJSON(map[string]string{
 			"type":    "FEEDBACK",
-			"message": fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, p.Topic),
+			"message": fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, t.Topic),
 		}))
 	}
 }
 
-func (p *Topic) removeWS(ws *WebSocket) {
-	delete(p.Subs, ws.Key)
-	delete(p.Pubs, ws.Key)
+func (t *Topic) dereferenceWebsocket(ws *WebSocket) {
+	t.Lock()
+	defer t.Unlock()
+	for k := range t.Subs {
+		if k == ws.Key {
+			delete(t.Subs, ws.Key)
+		}
+	}
+	for k := range t.Pubs {
+		if k == ws.Key {
+			delete(t.Pubs, ws.Key)
+		}
+	}
 }
 
 type Hub struct {
@@ -128,10 +138,4 @@ func (p *Hub) Sub(topic string, ws *WebSocket) {
 func (p *Hub) Pub(topic string, msg *Message) {
 	tpc := p.GetTopic(topic)
 	tpc.Pub(msg)
-}
-
-func (p *Hub) removeWS(ws *WebSocket) {
-	for _, tpc := range p.Topics {
-		tpc.removeWS(ws)
-	}
 }

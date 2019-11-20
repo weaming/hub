@@ -41,63 +41,44 @@ func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 	}
 	go rv.ProcessError()
 	go rv.ProcessMessage()
-	// remove from Hub map
-	// conn.SetCloseHandler(func(code int, text string) error {
-	// 	message := websocket.FormatCloseMessage(code, "")
-	// 	conn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-	// 	return nil
-	// })
 	return rv
 }
 
-func (p *WebSocket) ProcessError() {
+func (w *WebSocket) ProcessError() {
 	for {
-		err := <-p.ErrChan
+		err := <-w.ErrChan
 		if err != nil {
 			log.Printf("[WebSocket] %v", err)
-			p.Close()
-			HUB.removeWS(p)
+			w.Close()
 			return
 		}
 	}
 }
 
-func (p *WebSocket) Close() {
-	p.conn.Close()
-	for _, t := range p.Topics {
-		p.GC(HUB.GetTopic(t))
+func (w *WebSocket) Close() {
+	w.conn.Close()
+	for _, t := range w.Topics {
+		HUB.GetTopic(t).dereferenceWebsocket(w)
 	}
 }
 
-func (p *WebSocket) GC(topic *Topic) {
-	topic.Lock()
-	defer topic.Unlock()
-	for _, arr := range []map[string]*WebSocket{topic.Subs} {
-		for k := range arr {
-			if k == p.Key {
-				delete(arr, p.Key)
-			}
-		}
-	}
-}
-
-func (p *WebSocket) Sub(topic string) {
-	if !InStrArr(topic, p.Topics...) {
-		p.Topics = append(p.Topics, topic)
-		HUB.Sub(topic, p)
-		p.WriteSafe(ToJSON(map[string]string{
+func (w *WebSocket) Sub(topic string) {
+	if !InStrArr(topic, w.Topics...) {
+		w.Topics = append(w.Topics, topic)
+		HUB.Sub(topic, w)
+		w.WriteSafe(ToJSON(map[string]string{
 			"type":    "FEEDBACK",
 			"message": fmt.Sprintf(`subscribed on topic "%s"`, topic),
 		}))
 	}
 }
 
-func (p *WebSocket) Pub(topic string, msg *Message) {
+func (w *WebSocket) Pub(topic string, msg *Message) {
 	HUB.Pub(topic, msg)
 }
 
 //  send message to subscribers
-func (p *WebSocket) send(topic string, msg *Message) {
+func (w *WebSocket) send(topic string, msg *Message) {
 	bytes := ToJSON(map[string]interface{}{
 		"type":  MTMessage,
 		"topic": topic,
@@ -106,23 +87,24 @@ func (p *WebSocket) send(topic string, msg *Message) {
 			Data: msg.Data,
 		},
 	})
-	err := p.WriteSafe(bytes)
+	err := w.WriteSafe(bytes)
 	if err != nil {
-		p.ErrChan <- err
+		w.ErrChan <- err
 	}
 }
 
-func (p *WebSocket) WriteSafe(bytes []byte) error {
-	p.Lock()
-	defer p.Unlock()
-	return p.conn.WriteMessage(websocket.TextMessage, bytes)
+func (w *WebSocket) WriteSafe(bytes []byte) error {
+	w.Lock()
+	defer w.Unlock()
+	return w.conn.WriteMessage(websocket.TextMessage, bytes)
 }
 
-func (p *WebSocket) ProcessMessage() {
+// call msg.Process() and detect errors
+func (w *WebSocket) ProcessMessage() {
 	for {
-		messageType, msg, e := p.conn.ReadMessage()
+		messageType, msg, e := w.conn.ReadMessage()
 		if e != nil {
-			p.ErrChan <- e
+			w.ErrChan <- e
 			return
 		}
 
@@ -135,14 +117,14 @@ func (p *WebSocket) ProcessMessage() {
 			if e != nil {
 				err = e
 			} else {
-				data, err = clientMsg.Process(p)
+				data, err = clientMsg.Process(w)
 			}
 		case websocket.BinaryMessage:
 			err = fmt.Errorf("binary message is not supported")
 		}
 
-		if err = p.WriteSafe(genResponseData(data, err)); err != nil {
-			p.ErrChan <- err
+		if err = w.WriteSafe(genResponseData(data, err)); err != nil {
+			w.ErrChan <- err
 			// conn maybe have been closed by manual or client
 			return
 		}
