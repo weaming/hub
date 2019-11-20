@@ -53,8 +53,8 @@ type Topic struct {
 func (t *Topic) Sub(ws *WebSocket) {
 	t.Lock()
 	defer t.Unlock()
-	if _, ok := t.Subs[ws.Key]; !ok {
-		t.Subs[ws.Key] = ws
+	if _, ok := t.Subs[ws.ID]; !ok {
+		t.Subs[ws.ID] = ws
 		t.UpdatedAt = time.Now()
 	}
 }
@@ -65,8 +65,8 @@ func (t *Topic) Pub(msg *Message) {
 
 	if msg.SourceWS != nil {
 		ws := msg.SourceWS
-		if _, ok := t.Pubs[ws.Key]; !ok {
-			t.Pubs[ws.Key] = ws
+		if _, ok := t.Pubs[ws.ID]; !ok {
+			t.Pubs[ws.ID] = ws
 			t.UpdatedAt = time.Now()
 		}
 	}
@@ -95,13 +95,13 @@ func (t *Topic) dereferenceWebsocket(ws *WebSocket) {
 	t.Lock()
 	defer t.Unlock()
 	for k := range t.Subs {
-		if k == ws.Key {
-			delete(t.Subs, ws.Key)
+		if k == ws.ID {
+			delete(t.Subs, ws.ID)
 		}
 	}
 	for k := range t.Pubs {
-		if k == ws.Key {
-			delete(t.Pubs, ws.Key)
+		if k == ws.ID {
+			delete(t.Pubs, ws.ID)
 		}
 	}
 }

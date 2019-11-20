@@ -20,7 +20,7 @@ type WebSocket struct {
 	sync.Mutex
 	conn      *websocket.Conn
 	req       *http.Request
-	Key       string     `json:"key"`
+	ID        string     `json:"id"`
 	Topics    []string   `json:"topics"`
 	ErrChan   chan error `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -29,7 +29,7 @@ type WebSocket struct {
 func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	rv := &WebSocket{
-		Key:       Sha256([]byte(fmt.Sprintf("%+v", conn))),
+		ID:        Sha256([]byte(fmt.Sprintf("%+v", conn))),
 		conn:      conn,
 		req:       r,
 		Topics:    []string{},
