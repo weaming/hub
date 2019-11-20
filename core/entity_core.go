@@ -34,10 +34,10 @@ const (
 
 // http client message
 type Message struct {
-	Type      string `json:"type"`
-	Data      string `json:"data"` // string or base64 of bytes
-	SourceReq *http.Request
-	SourceWS  *WebSocket
+	Type      string        `json:"type"`
+	Data      string        `json:"data"` // string or base64 of bytes
+	SourceReq *http.Request `json:"-"`
+	SourceWS  *WebSocket    `json:"-"`
 }
 
 type Topic struct {
@@ -71,7 +71,7 @@ func (t *Topic) Pub(msg *Message) {
 		}
 	}
 
-	// save into in-memoery buffers
+	// save into in-memory buffers
 	success := BufPub(t.Topic, ToJSON(msg))
 	log.Printf("buffered on topic %v, %v %v\n", t.Topic, success, string(ToJSON(msg)))
 
