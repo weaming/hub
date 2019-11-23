@@ -8,9 +8,11 @@ import (
 	"time"
 )
 
-var HUB = &Hub{
-	Topics: map[string]*Topic{},
-}
+// Hub for public
+var HUBPublic = NewHub()
+
+// Hub for private
+var HUBShare = NewHub()
 
 const GlobalTopicID = "global"
 
@@ -33,7 +35,7 @@ const (
 )
 
 // http client message
-type Message struct {
+type PubMessage struct {
 	Type      string        `json:"type"`
 	Data      string        `json:"data"` // string or base64 of bytes
 	SourceReq *http.Request `json:"-"`
@@ -59,7 +61,7 @@ func (t *Topic) Sub(ws *WebSocket) {
 	}
 }
 
-func (t *Topic) Pub(msg *Message) {
+func (t *Topic) Pub(msg *PubMessage) {
 	t.Lock()
 	defer t.Unlock()
 
@@ -111,6 +113,12 @@ type Hub struct {
 	Topics map[string]*Topic `json:"topics"`
 }
 
+func NewHub() *Hub {
+	return &Hub{
+		Topics: map[string]*Topic{},
+	}
+}
+
 func (p *Hub) GetTopic(topic string) *Topic {
 	p.Lock()
 	defer p.Unlock()
@@ -135,7 +143,7 @@ func (p *Hub) Sub(topic string, ws *WebSocket) {
 	tpc.Sub(ws)
 }
 
-func (p *Hub) Pub(topic string, msg *Message) {
+func (p *Hub) Pub(topic string, msg *PubMessage) {
 	tpc := p.GetTopic(topic)
 	tpc.Pub(msg)
 }

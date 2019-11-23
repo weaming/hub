@@ -1,11 +1,13 @@
 package core
 
 import (
+	"context"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"log"
-	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -13,80 +15,123 @@ const (
 	POST = "POST"
 )
 
-func WSHandler(w http.ResponseWriter, req *http.Request) {
-	ws := NewWebsocket(w, req)
+func WSHandler(c *gin.Context) {
+	ws := NewWebsocket(c)
 	ws.WriteSafe(genResponseData("connected", nil))
 	ws.Sub(GlobalTopicID)
 }
 
-func HTTPHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func HTTPPubHandler(c *gin.Context) {
+	var data interface{}
+	var err error
+	body, _ := c.GetRawData()
+	clientMsg, err := UnmarshalClientMessage(body, getHub(c))
+	if err == nil {
+		data, err = clientMsg.Process(nil)
+	}
+	JONSWithSmartCode(c, data, err)
+}
 
+func JONSWithSmartCode(c *gin.Context, data interface{}, err error) {
+	code := 200
+	if err != nil {
+		code = 500
+	}
+	c.JSON(code, composeReponse(data, err))
+}
+
+func HTTPGetHandler(c *gin.Context) {
 	var data interface{}
 	var err error
 
-	if req.Method == POST {
-		defer req.Body.Close()
-		body, _ := ioutil.ReadAll(req.Body)
-		clientMsg, e := UnmarshalClientMessage(body)
-		if e != nil {
-			err = e
-		} else {
-			data, err = clientMsg.Process(nil)
-		}
-	} else {
-		topic := GetQuery(req, "topic")
-		amount := GetQuery(req, "amount")
-		if topic == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(genResponseData(data, errors.New("missing topic")))
-			return
-		}
-		if amount == "" {
-			amount = "10"
-		}
-		amountN, err := strconv.Atoi(amount)
-		if err != nil {
-			w.Write(genResponseData(data, err))
-			return
-		}
-
-		dataBytes := BufGetN(topic, amountN)
-		_data := []string{}
-		for _, x := range dataBytes {
-			s := string(x)
-			_data = append(_data, s)
-		}
-
-		data = map[string]interface{}{
-			"data":  _data,
-			"count": len(_data),
-		}
-		w.Write(genResponseData(data, err))
+	topic := c.Query("topic")
+	amount := c.DefaultQuery("amount", "10")
+	if topic == "" {
+		c.JSON(400, composeReponse(data, errors.New("missing topic")))
+		return
+	}
+	amountN, err := strconv.Atoi(amount)
+	if err != nil {
+		c.JSON(400, composeReponse(data, err))
 		return
 	}
 
-	w.Write(genResponseData(data, err))
+	dataBytes := BufGetN(topic, amountN)
+	_data := []string{}
+	for _, x := range dataBytes {
+		s := string(x)
+		_data = append(_data, s)
+	}
+
+	data = map[string]interface{}{
+		"data":  _data,
+		"count": len(_data),
+	}
+	c.JSON(200, composeReponse(data, err))
 }
 
-func StatusHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(genResponseData(HUB, nil))
+func StatusHandler(c *gin.Context) {
+	c.JSON(200, composeReponse(getHub(c), nil))
+}
+
+func getHub(c *gin.Context) *Hub {
+	return c.Request.Context().Value("hub").(*Hub)
+}
+
+func withHub(hub *Hub, fn func(*gin.Context)) func(*gin.Context) {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		c.Request = c.Request.WithContext(context.WithValue(ctx, "hub", hub))
+		fn(c)
+	}
+}
+
+func dynamicHub(fn func(*gin.Context)) func(*gin.Context) {
+	return func(c *gin.Context) {
+		u, _ := c.Get(gin.AuthUserKey)
+		user := u.(string)
+		hub := HUB_MAP.GetHub(user)
+		withHub(hub, fn)(c)
+	}
 }
 
 func ServeHub(listen string) {
+	users := MustMapStr(LoadJSON("users.json").MustMap())
+	fmt.Println("auth", ToJSONStr(users))
+
 	log.Printf("serve http on %s", listen)
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.Write(ToJSON(map[string]string{
+	r := gin.Default()
+
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
 			"status":      "service is healthy",
 			"source_code": "https://github.com/weaming/hub",
-		}))
+		})
 	})
 
-	http.HandleFunc("/http", HTTPHandler)
-	http.HandleFunc("/ws", WSHandler)
-	http.HandleFunc("/status", StatusHandler)
+	index := r.Group("/")
+	index.GET("/http", withHub(HUBPublic, HTTPGetHandler))
+	index.POST("/http", withHub(HUBPublic, HTTPPubHandler))
+	index.GET("/ws", withHub(HUBPublic, WSHandler))
+	index.GET("/status", withHub(HUBPublic, StatusHandler))
 
-	err := http.ListenAndServe(listen, nil)
-	FatalErr(err)
+	public := r.Group("/api/public")
+	public.GET("/http", withHub(HUBPublic, HTTPGetHandler))
+	public.POST("/http", withHub(HUBPublic, HTTPPubHandler))
+	public.GET("/ws", withHub(HUBPublic, WSHandler))
+	public.GET("/status", withHub(HUBPublic, StatusHandler))
+
+	authShare := r.Group("/api/share", gin.BasicAuth(gin.Accounts(users)))
+	authShare.GET("/http", withHub(HUBShare, HTTPGetHandler))
+	authShare.POST("/http", withHub(HUBShare, HTTPPubHandler))
+	authShare.GET("/ws", withHub(HUBShare, WSHandler))
+	authShare.GET("/status", withHub(HUBShare, StatusHandler))
+
+	authPrivate := r.Group("/api/private", gin.BasicAuth(gin.Accounts(users)))
+	authPrivate.GET("/http", dynamicHub(HTTPGetHandler))
+	authPrivate.POST("/http", dynamicHub(HTTPPubHandler))
+	authPrivate.GET("/ws", dynamicHub(WSHandler))
+	authPrivate.GET("/status", dynamicHub(StatusHandler))
+
+	r.Run(listen)
 }

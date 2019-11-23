@@ -19,11 +19,12 @@ func (p *ReqResMessage) Str() string {
 	return ""
 }
 
-type Request struct {
+type PubRequest struct {
 	Action  string        `json:"action"`
 	Topics  []string      `json:"topics"`
 	Subs    []string      `json:"subs"`
 	Message ReqResMessage `json:"message"`
+	Hub     *Hub          `json:"-"`
 }
 
 const (
@@ -31,8 +32,8 @@ const (
 	ActionSub = "SUB"
 )
 
-func UnmarshalClientMessage(msg []byte) (*Request, error) {
-	clientMsg := &Request{}
+func UnmarshalClientMessage(msg []byte, hub *Hub) (*PubRequest, error) {
+	clientMsg := &PubRequest{Hub: hub}
 	err := json.Unmarshal(msg, clientMsg)
 	if err != nil {
 		log.Println(err)
@@ -41,11 +42,11 @@ func UnmarshalClientMessage(msg []byte) (*Request, error) {
 	return clientMsg, nil
 }
 
-func (p *Request) Pub(topic string, msg *Message) {
-	HUB.Pub(topic, msg)
+func (p *PubRequest) Pub(topic string, msg *PubMessage) {
+	p.Hub.Pub(topic, msg)
 }
 
-func (p *Request) Process(ws *WebSocket) (m string, err error) {
+func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 	// optional ws, nil stands for HTTP client PUBlished a message
 
 	// p.Message maybe not nil but dereference fail
@@ -70,9 +71,9 @@ func (p *Request) Process(ws *WebSocket) (m string, err error) {
 			return "", fmt.Errorf("message data not provided or type is not in %s", ReprStrArr(MTAll...))
 		}
 
-		var msg *Message
+		var msg *PubMessage
 		if ws != nil {
-			msg = &Message{
+			msg = &PubMessage{
 				Type:      message.Type,
 				Data:      message.Data,
 				SourceReq: ws.req,
@@ -83,7 +84,7 @@ func (p *Request) Process(ws *WebSocket) (m string, err error) {
 				ws.Pub(topic, msg)
 			}
 		} else {
-			msg = &Message{
+			msg = &PubMessage{
 				Type: message.Type,
 				Data: message.Data,
 			}

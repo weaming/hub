@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,9 +25,12 @@ type WebSocket struct {
 	Topics    []string   `json:"topics"`
 	ErrChan   chan error `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
+	Hub       *Hub       `json:"-"`
 }
 
-func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
+func NewWebsocket(c *gin.Context) *WebSocket {
+	w := c.Writer
+	r := c.Request
 	conn, err := upgrader.Upgrade(w, r, nil)
 	rv := &WebSocket{
 		ID:        Sha256([]byte(fmt.Sprintf("%+v", conn))),
@@ -35,6 +39,7 @@ func NewWebsocket(w http.ResponseWriter, r *http.Request) *WebSocket {
 		Topics:    []string{},
 		ErrChan:   make(chan error, 1),
 		CreatedAt: time.Now(),
+		Hub:       getHub(c),
 	}
 	if err != nil {
 		rv.ErrChan <- err
@@ -59,14 +64,14 @@ func (w *WebSocket) ProcessError() {
 func (w *WebSocket) Close() {
 	w.conn.Close()
 	for _, t := range w.Topics {
-		HUB.GetTopic(t).dereferenceWebsocket(w)
+		w.Hub.GetTopic(t).dereferenceWebsocket(w)
 	}
 }
 
 func (w *WebSocket) Sub(topic string) {
 	if !InStrArr(topic, w.Topics...) {
 		w.Topics = append(w.Topics, topic)
-		HUB.Sub(topic, w)
+		w.Hub.Sub(topic, w)
 		w.WriteSafe(ToJSON(map[string]string{
 			"type":    "FEEDBACK",
 			"message": fmt.Sprintf(`subscribed on topic "%s"`, topic),
@@ -74,12 +79,12 @@ func (w *WebSocket) Sub(topic string) {
 	}
 }
 
-func (w *WebSocket) Pub(topic string, msg *Message) {
-	HUB.Pub(topic, msg)
+func (w *WebSocket) Pub(topic string, msg *PubMessage) {
+	w.Hub.Pub(topic, msg)
 }
 
 //  send message to subscribers
-func (w *WebSocket) send(topic string, msg *Message) {
+func (w *WebSocket) send(topic string, msg *PubMessage) {
 	bytes := ToJSON(map[string]interface{}{
 		"type":  MTMessage,
 		"topic": topic,
@@ -114,7 +119,7 @@ func (w *WebSocket) ProcessMessage() {
 
 		switch messageType {
 		case websocket.TextMessage:
-			clientMsg, e := UnmarshalClientMessage(msg)
+			clientMsg, e := UnmarshalClientMessage(msg, w.Hub)
 			if e != nil {
 				err = e
 			} else {

@@ -1,8 +1,6 @@
 package core
 
-import "encoding/json"
-
-func genResponseData(data interface{}, err error) []byte {
+func composeReponse(data interface{}, err error) map[string]interface{} {
 	var respData map[string]interface{}
 	if err != nil {
 		respData = map[string]interface{}{
@@ -17,8 +15,8 @@ func genResponseData(data interface{}, err error) []byte {
 			"message": data,
 		}
 	}
-
-	jData, err := json.Marshal(respData)
-	FatalErr(err)
-	return jData
+	return respData
+}
+func genResponseData(data interface{}, err error) []byte {
+	return ToJSON(composeReponse(data, err))
 }
