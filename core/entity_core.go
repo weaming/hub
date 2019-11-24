@@ -11,7 +11,7 @@ import (
 // Hub for public
 var HUBPublic = NewHub()
 
-// Hub for private
+// Hub for share
 var HUBShare = NewHub()
 
 const GlobalTopicID = "global"
