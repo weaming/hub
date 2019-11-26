@@ -7,12 +7,12 @@ import (
 	"log"
 )
 
-type ReqResMessage struct {
+type PayloadMessage struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
 }
 
-func (p *ReqResMessage) Str() string {
+func (p *PayloadMessage) Str() string {
 	if InStrArr(p.Type, MTAll...) {
 		return p.Data
 	}
@@ -20,11 +20,10 @@ func (p *ReqResMessage) Str() string {
 }
 
 type PubRequest struct {
-	Action  string        `json:"action"`
-	Topics  []string      `json:"topics"`
-	Subs    []string      `json:"subs"`
-	Message ReqResMessage `json:"message"`
-	Hub     *Hub          `json:"-"`
+	Action  string         `json:"action"`
+	Topics  []string       `json:"topics"`
+	Message PayloadMessage `json:"message"`
+	hub     *Hub
 }
 
 const (
@@ -33,7 +32,7 @@ const (
 )
 
 func UnmarshalClientMessage(msg []byte, hub *Hub) (*PubRequest, error) {
-	clientMsg := &PubRequest{Hub: hub}
+	clientMsg := &PubRequest{hub: hub}
 	err := json.Unmarshal(msg, clientMsg)
 	if err != nil {
 		log.Println(err)
@@ -43,19 +42,11 @@ func UnmarshalClientMessage(msg []byte, hub *Hub) (*PubRequest, error) {
 }
 
 func (p *PubRequest) Pub(topic string, msg *PubMessage) {
-	p.Hub.Pub(topic, msg)
+	p.hub.Pub(topic, msg)
 }
 
 func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
-	// optional ws, nil stands for HTTP client PUBlished a message
-
-	// p.Message maybe not nil but dereference fail
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		err = fmt.Errorf("%v", r)
-	// 	}
-	// }()
-
+	// optional ws, nil stands for a message published by HTTP client
 	topics := p.Topics
 	topicsStr := ReprStrArr(topics...)
 

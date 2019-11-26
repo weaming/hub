@@ -22,7 +22,7 @@ type WebSocket struct {
 	conn      *websocket.Conn
 	req       *http.Request
 	ID        string     `json:"id"`
-	Topics    []string   `json:"topics"`
+	Topics    []string   `json:"topics"` // subscribed topics
 	ErrChan   chan error `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
 	Hub       *Hub       `json:"-"`
@@ -63,8 +63,8 @@ func (w *WebSocket) ProcessError() {
 
 func (w *WebSocket) Close() {
 	w.conn.Close()
-	for _, t := range w.Topics {
-		w.Hub.GetTopic(t).dereferenceWebsocket(w)
+	for _, t := range w.Hub.Topics {
+		t.dereferenceWebsocket(w)
 	}
 }
 
@@ -88,7 +88,7 @@ func (w *WebSocket) send(topic string, msg *PubMessage) {
 	bytes := ToJSON(map[string]interface{}{
 		"type":  MTMessage,
 		"topic": topic,
-		"message": ReqResMessage{
+		"message": PayloadMessage{
 			Type: msg.Type,
 			Data: msg.Data,
 		},
