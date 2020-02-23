@@ -54,27 +54,31 @@ def run_until_close(bee=None, on_msg=None):
 def data_to_str(data, type):
     if type in [MESSAGE_TYPE.JSON.name]:
         return json.dumps(data, ensure_ascii=False)
-    if type in [MESSAGE_TYPE.IMAGE.name]:
+    if type in [MESSAGE_TYPE.PHOTO.name, MESSAGE_TYPE.VIDEO.name]:
         if not isinstance(data, str):
-            return b64encode(data).decode('utf8')
+            return b64encode(data).encode('utf8')
     return str(data)
 
 
 def new_pub_message(
     data,
+    *,
     type=MESSAGE_TYPE.PLAIN.name,
+    caption=None,
     topics=('global',),
-    extended_data=[],
-    captions=[],
+    extended_data: List[Dict] = [],
 ):
+    extended_data = deepcopy(extended_data)
+    for x in extended_data:
+        x['data'] = data_to_str(x['data'], x['type'])
     return {
         'action': "PUB",
         'topics': topics,
         'message': {
             'type': type,
             'data': data_to_str(data, type),
-            'extended_data': [data_to_str(x, type) for x in extended_data],
-            'captions': captions,
+            'caption': caption,
+            'extended_data': extended_data,
         },
     }
 
@@ -84,13 +88,31 @@ def http_post_data_to_hub(data, topics, type=MESSAGE_TYPE.JSON.name):
     return requests.post("https://hub.drink.cafe/http", json=msg)
 
 
-def http_post_photos_to_hub(data: list, topics, captions=[]):
+def guess_type(x: str):
+    return (
+        MESSAGE_TYPE.PHOTO.name
+        if isinstance(x, bytes)  # bytes -> default 'photo'
+        or any((t in x) for t in ['.jpg', '.png', '.webp', '.gif', '.heic'])
+        else MESSAGE_TYPE.VIDEO.name
+    )
+
+
+def http_post_media_list_to_hub(data: List[str], topics, captions=[]):
+    """
+    determine the type of urls in data
+    """
+    missing = len(data) - len(captions)
+    if missing:
+        captions += [''] * missing
     msg = new_pub_message(
         data[0],
-        type=MESSAGE_TYPE.IMAGE.name,
+        caption=captions[0],
+        type=guess_type(data[0]),
         topics=topics,
-        extended_data=data[1:],
-        captions=captions,
+        extended_data=[
+            {'type': guess_type(x), 'data': x, 'caption': captions[1:][i]}
+            for i, x in enumerate(data[1:])
+        ],
     )
     return requests.post("https://hub.drink.cafe/http", json=msg)
 
