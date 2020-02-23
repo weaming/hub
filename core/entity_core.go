@@ -22,11 +22,11 @@ const (
 	MTMarkdown string = "MARKDOWN"
 	MTJSON     string = "JSON"
 	MTHTML     string = "HTML"
-	MTImage    string = "IMAGE"
+	MTPhoto    string = "PHOTO"
 	MTVideo    string = "VIDEO"
 )
 
-var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTImage, MTVideo}
+var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTPhoto, MTVideo}
 
 // types of websocket messages
 const (
