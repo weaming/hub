@@ -23,9 +23,10 @@ const (
 	MTJSON     string = "JSON"
 	MTHTML     string = "HTML"
 	MTImage    string = "IMAGE"
+	MTVideo    string = "VIDEO"
 )
 
-var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTImage}
+var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTImage, MTVideo}
 
 // types of websocket messages
 const (
@@ -34,12 +35,18 @@ const (
 	MTMessage  string = "MESSAGE"  // used for publish messages
 )
 
+type RawMessage struct {
+	Type    string `json:"type"`    // required
+	Data    string `json:"data"`    // required, string or base64 of bytes
+	Caption string `json:"caption"` // optional
+}
+
 // http client message
 type PubMessage struct {
 	Type         string        `json:"type"`
-	Data         string        `json:"data"`          // string or base64 of bytes
-	ExtendedData []string      `json:"extended_data"` // string or base64 of bytes, for sending multiple photos
-	Captions     []string      `json:"captions"`      // all captions of Data and ExtendedData
+	Data         string        `json:"data"` // string or base64 of bytes
+	Caption      string        `json:"caption"`
+	ExtendedData []RawMessage  `json:"extended_data"` // string or base64 of bytes, for sending multiple photos
 	SourceReq    *http.Request `json:"-"`
 	SourceWS     *WebSocket    `json:"-"`
 }

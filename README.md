@@ -20,6 +20,8 @@ const (
 	MTJSON     string = "JSON"
 	MTHTML     string = "HTML"
 	MTImage    string = "IMAGE"
+	MTVideo    string = "VIDEO"
+	MTImage    string = "MEDIA" // allow mix of image or video
 )
 
 // types of websocket messages
