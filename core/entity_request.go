@@ -59,13 +59,9 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 				ws.Pub(topic, msg)
 			}
 		} else {
-			msg = &PubMessage{
-				Type: message.Type,
-				Data: message.Data,
-			}
 			for _, topic := range topics {
 				// message can publish to HUB directly
-				p.Pub(topic, msg)
+				p.Pub(topic, &message)
 			}
 		}
 		return fmt.Sprintf("publish requests on topics %s are processing", topicsStr), nil
