@@ -44,6 +44,13 @@ type PubMessage struct {
 	SourceWS     *WebSocket    `json:"-"`
 }
 
+func (p *PubMessage) Str() string {
+	if InStrArr(p.Type, MTAll...) {
+		return p.Data
+	}
+	return ""
+}
+
 type Topic struct {
 	sync.RWMutex
 	Topic     string                `json:"topic"`

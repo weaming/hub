@@ -7,22 +7,10 @@ import (
 	"log"
 )
 
-type PayloadMessage struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
-}
-
-func (p *PayloadMessage) Str() string {
-	if InStrArr(p.Type, MTAll...) {
-		return p.Data
-	}
-	return ""
-}
-
 type PubRequest struct {
-	Action  string         `json:"action"`
-	Topics  []string       `json:"topics"`
-	Message PayloadMessage `json:"message"`
+	Action  string     `json:"action"`
+	Topics  []string   `json:"topics"`
+	Message PubMessage `json:"message"`
 	hub     *Hub
 }
 
@@ -64,12 +52,8 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 
 		var msg *PubMessage
 		if ws != nil {
-			msg = &PubMessage{
-				Type:      message.Type,
-				Data:      message.Data,
-				SourceReq: ws.req,
-				SourceWS:  ws,
-			}
+			message.SourceReq = ws.req
+			message.SourceWS = ws
 			for _, topic := range topics {
 				// publish through the ws
 				ws.Pub(topic, msg)
