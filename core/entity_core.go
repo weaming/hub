@@ -16,7 +16,7 @@ var HUBShare = NewHub()
 
 const GlobalTopicID = "global"
 
-// representation of internal messages
+// types of internal messages
 const (
 	MTPlain    string = "PLAIN"
 	MTMarkdown string = "MARKDOWN"
@@ -27,7 +27,7 @@ const (
 
 var MTAll = []string{MTPlain, MTMarkdown, MTJSON, MTHTML, MTImage}
 
-// representation of websocket messages
+// types of websocket messages
 const (
 	MTFeedback string = "FEEDBACK" // used for async event feedback
 	MTResponse string = "RESPONSE" // used for message response

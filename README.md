@@ -11,6 +11,24 @@
 ## Core structures
 
 ```go
+const GlobalTopicID = "global"
+
+// types of internal messages
+const (
+	MTPlain    string = "PLAIN"
+	MTMarkdown string = "MARKDOWN"
+	MTJSON     string = "JSON"
+	MTHTML     string = "HTML"
+	MTImage    string = "IMAGE"
+)
+
+// types of websocket messages
+const (
+	MTFeedback string = "FEEDBACK" // used for async event feedback
+	MTResponse string = "RESPONSE" // used for message response
+	MTMessage  string = "MESSAGE"  // used for publish messages
+)
+
 type PubMessage struct {
 	Type         string        `json:"type"`
 	Data         string        `json:"data"`          // string or base64 of bytes
