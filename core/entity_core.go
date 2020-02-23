@@ -36,10 +36,12 @@ const (
 
 // http client message
 type PubMessage struct {
-	Type      string        `json:"type"`
-	Data      string        `json:"data"` // string or base64 of bytes
-	SourceReq *http.Request `json:"-"`
-	SourceWS  *WebSocket    `json:"-"`
+	Type         string        `json:"type"`
+	Data         string        `json:"data"`          // string or base64 of bytes
+	ExtendedData []string      `json:"extended_data"` // string or base64 of bytes, for sending multiple photos
+	Captions     []string      `json:"captions"`      // all captions of Data and ExtendedData
+	SourceReq    *http.Request `json:"-"`
+	SourceWS     *WebSocket    `json:"-"`
 }
 
 type Topic struct {
