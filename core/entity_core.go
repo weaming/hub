@@ -41,6 +41,10 @@ type RawMessage struct {
 	Caption string `json:"caption"` // optional
 }
 
+func (p *RawMessage) isMedia() bool {
+	return p.Type == MTPhoto || p.Type == MTVideo
+}
+
 // http client message
 type PubMessage struct {
 	Type         string        `json:"type"`
@@ -56,6 +60,9 @@ func (p *PubMessage) Str() string {
 		return p.Data
 	}
 	return ""
+}
+func (p *PubMessage) isMedia() bool {
+	return p.Type == MTPhoto || p.Type == MTVideo
 }
 
 type Topic struct {

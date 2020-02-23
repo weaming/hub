@@ -8,9 +8,9 @@ import (
 )
 
 type PubRequest struct {
-	Action  string     `json:"action"`
-	Topics  []string   `json:"topics"`
-	Message PubMessage `json:"message"`
+	Action  string      `json:"action"`
+	Topics  []string    `json:"topics"`
+	Message *PubMessage `json:"message"`
 	hub     *Hub
 }
 
@@ -50,6 +50,14 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 			return "", fmt.Errorf("message data not provided or type is not in %s", ReprStrArr(MTAll...))
 		}
 
+		// if message.isMedia() {
+		// 	for i, x := range message.ExtendedData {
+		// 		if x.isMedia() {
+		// 			return "", fmt.Errorf("type of extended_data at index %d is not a media: got %s", i, x.Type)
+		// 		}
+		// 	}
+		// }
+
 		var msg *PubMessage
 		if ws != nil {
 			message.SourceReq = ws.req
@@ -61,7 +69,7 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 		} else {
 			for _, topic := range topics {
 				// message can publish to HUB directly
-				p.Pub(topic, &message)
+				p.Pub(topic, message)
 			}
 		}
 		return fmt.Sprintf("publish requests on topics %s are processing", topicsStr), nil
