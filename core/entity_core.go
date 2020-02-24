@@ -47,10 +47,10 @@ func (p *RawMessage) isMedia() bool {
 
 // http client message
 type PubMessage struct {
-	Type         string        `json:"type"`
-	Data         string        `json:"data"` // string or base64 of bytes
-	Caption      string        `json:"caption"`
-	ExtendedData []RawMessage  `json:"extended_data"` // string or base64 of bytes, for sending multiple photos
+	Type         string        `json:"type"`          // required
+	Data         string        `json:"data"`          // required, string or base64 of bytes
+	Caption      string        `json:"caption"`       // required
+	ExtendedData []RawMessage  `json:"extended_data"` // optional, string or base64 of bytes, for sending multiple photos
 	SourceReq    *http.Request `json:"-"`
 	SourceWS     *WebSocket    `json:"-"`
 }

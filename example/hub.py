@@ -1,6 +1,8 @@
 import logging
 import json
 from functools import partial
+from copy import deepcopy
+from typing import List, Dict
 from enum import Enum
 from base64 import b64encode
 
@@ -19,7 +21,8 @@ class MESSAGE_TYPE(Enum):
     MARKDOWN = "MARKDOWN"
     JSON = "JSON"
     HTML = "HTML"
-    IMAGE = "IMAGE"
+    PHOTO = "PHOTO"
+    VIDEO = "VIDEO"
 
 
 def on_message(ws, message):
@@ -56,7 +59,7 @@ def data_to_str(data, type):
         return json.dumps(data, ensure_ascii=False)
     if type in [MESSAGE_TYPE.PHOTO.name, MESSAGE_TYPE.VIDEO.name]:
         if not isinstance(data, str):
-            return b64encode(data).encode('utf8')
+            return b64encode(data).decode('utf8')
     return str(data)
 
 
@@ -138,7 +141,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.photo:
         print(
-            http_post_photos_to_hub(
+            http_post_media_list_to_hub(
                 [
                     x if x.startswith('http') else open(x, 'rb').read()
                     for x in args.photo

@@ -19,9 +19,8 @@ const (
 	MTMarkdown string = "MARKDOWN"
 	MTJSON     string = "JSON"
 	MTHTML     string = "HTML"
-	MTImage    string = "IMAGE"
+	MTPhoto    string = "PHOTO"
 	MTVideo    string = "VIDEO"
-	MTImage    string = "MEDIA" // allow mix of image or video
 )
 
 // types of websocket messages
@@ -31,10 +30,17 @@ const (
 	MTMessage  string = "MESSAGE"  // used for publish messages
 )
 
+type RawMessage struct {
+	Type    string `json:"type"`    // required
+	Data    string `json:"data"`    // required, string or base64 of bytes
+	Caption string `json:"caption"` // optional
+}
+
+// http client message
 type PubMessage struct {
-	Type         string        `json:"type"`
-	Data         string        `json:"data"`          // string or base64 of bytes
-	ExtendedData []string      `json:"extended_data"` // string or base64 of bytes, for sending multiple photos
-	Captions     []string      `json:"captions"`      // all captions of Data and ExtendedData
+	Type         string        `json:"type"`          // required
+	Data         string        `json:"data"`          // required, string or base64 of bytes
+	Caption      string        `json:"caption"`       // required
+	ExtendedData []RawMessage  `json:"extended_data"` // optional, string or base64 of bytes, for sending multiple photos
 }
 ```
