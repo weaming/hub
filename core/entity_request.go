@@ -58,13 +58,12 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 		// 	}
 		// }
 
-		var msg *PubMessage
 		if ws != nil {
 			message.SourceReq = ws.req
 			message.SourceWS = ws
 			for _, topic := range topics {
 				// publish through the ws
-				ws.Pub(topic, msg)
+				ws.Pub(topic, message)
 			}
 		} else {
 			for _, topic := range topics {
