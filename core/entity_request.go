@@ -46,6 +46,10 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 	case ActionPub:
 		message := p.Message
 		log.Printf("%+v", message)
+		if message == nil {
+			return "", errors.New("missing 'message' in PUB request")
+		}
+
 		if p.Message.Str() == "" {
 			return "", fmt.Errorf("message data not provided or type is not in %s", ReprStrArr(MTAll...))
 		}
