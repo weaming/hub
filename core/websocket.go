@@ -85,10 +85,10 @@ func (w *WebSocket) Pub(topic string, msg *PubMessage) {
 
 //  send message to subscribers
 func (w *WebSocket) send(topic string, msg *PubMessage) {
-	bytes := ToJSON(map[string]interface{}{
-		"type":    MTMessage,
-		"topic":   topic,
-		"message": msg,
+	bytes := ToJSON(PushMessage{
+		Type:    MTMessage,
+		Topic:   topic,
+		Message: msg,
 	})
 	err := w.WriteSafe(bytes)
 	if err != nil {

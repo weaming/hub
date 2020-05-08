@@ -36,24 +36,27 @@ const (
 	MTMessage  string = "MESSAGE"  // used for publish messages
 )
 
-type RawMessage struct {
+type PushMessage struct {
+	Type    string      `json:"type"`
+	Topic   string      `json:"topic"`
+	Message *PubMessage `json:"message"`
+}
+
+type RawItem struct {
 	Type    string `json:"type"`    // required
 	Data    string `json:"data"`    // required, string or base64 of bytes
 	Caption string `json:"caption"` // optional
 	Preview bool   `json:"preview"` // optional
 }
 
-func (p *RawMessage) isMedia() bool {
+func (p *RawItem) isMedia() bool {
 	return p.Type == MTPhoto || p.Type == MTVideo
 }
 
 // http client message
 type PubMessage struct {
-	Type         string        `json:"type"`          // required
-	Data         string        `json:"data"`          // required, string or base64 of bytes
-	Caption      string        `json:"caption"`       // optional
-	Preview      bool          `json:"preview"`       // optional
-	ExtendedData []RawMessage  `json:"extended_data"` // optional, string or base64 of bytes, for sending multiple photos
+	RawItem
+	ExtendedData []RawItem     `json:"extended_data"` // optional, string or base64 of bytes, for sending multiple photos
 	SourceReq    *http.Request `json:"-"`
 	SourceWS     *WebSocket    `json:"-"`
 }
