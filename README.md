@@ -15,12 +15,13 @@ const GlobalTopicID = "global"
 
 // types of internal messages
 const (
-	MTPlain    string = "PLAIN"
-	MTMarkdown string = "MARKDOWN"
-	MTJSON     string = "JSON"
-	MTHTML     string = "HTML"
-	MTPhoto    string = "PHOTO"
-	MTVideo    string = "VIDEO"
+	MTPlain      string = "PLAIN"
+	MTMarkdown   string = "MARKDOWN"
+	MTMarkdownV2 string = "MARKDOWNV2"
+	MTJSON       string = "JSON"
+	MTHTML       string = "HTML"
+	MTPhoto      string = "PHOTO"
+	MTVideo      string = "VIDEO"
 )
 
 // types of websocket messages
