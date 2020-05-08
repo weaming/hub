@@ -72,9 +72,9 @@ func (w *WebSocket) Sub(topic string) {
 	if !InStrArr(topic, w.Topics...) {
 		w.Topics = append(w.Topics, topic)
 		w.Hub.Sub(topic, w)
-		w.WriteSafe(ToJSON(map[string]string{
-			"type":    "FEEDBACK",
-			"message": fmt.Sprintf(`subscribed on topic "%s"`, topic),
+		w.WriteSafe(ToJSON(PushMessageFeedback{
+			Type:    MTFeedback,
+			Message: fmt.Sprintf(`subscribed on topic "%s"`, topic),
 		}))
 	}
 }
@@ -116,14 +116,16 @@ func (w *WebSocket) ProcessMessage() {
 
 		switch messageType {
 		case websocket.TextMessage:
-			clientMsg, e := UnmarshalClientMessage(msg, w.Hub)
-			if e != nil {
-				err = e
-			} else {
+			if clientMsg, err := UnmarshalClientMessage(msg, w.Hub); err == nil {
 				data, err = clientMsg.Process(w)
 			}
 		case websocket.BinaryMessage:
 			err = fmt.Errorf("binary message is not supported")
+		}
+
+		if err != nil {
+			log.Println(err)
+			continue
 		}
 
 		if err = w.WriteSafe(genResponseData(data, err)); err != nil {

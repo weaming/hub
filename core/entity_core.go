@@ -37,9 +37,20 @@ const (
 )
 
 type PushMessage struct {
-	Type    string      `json:"type"`
+	Type    string      `json:"type"` // MTMessage
 	Topic   string      `json:"topic"`
 	Message *PubMessage `json:"message"`
+}
+
+type PushMessageFeedback struct {
+	Type    string `json:"type"` // MTFeedback
+	Message string `json:"message"`
+}
+
+type PushMessageResponse struct {
+	Type    string      `json:"type"` // MTResponse
+	Success bool        `json:"success"`
+	Message interface{} `json:"message"`
 }
 
 type RawItem struct {
@@ -115,9 +126,9 @@ func (t *Topic) Pub(msg *PubMessage) {
 		}
 	}
 	if msg.SourceWS != nil {
-		msg.SourceWS.WriteSafe(ToJSON(map[string]string{
-			"type":    "FEEDBACK",
-			"message": fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, t.Topic),
+		msg.SourceWS.WriteSafe(ToJSON(PushMessageFeedback{
+			Type:    MTFeedback,
+			Message: fmt.Sprintf(`sent to total %v subscribers on topic "%s"`, c, t.Topic),
 		}))
 	}
 }
