@@ -14,13 +14,6 @@ func FatalErr(err error) {
 	}
 }
 
-func PrintErr(err error) bool {
-	if err != nil {
-		log.Println(err)
-	}
-	return err != nil
-}
-
 func StrTime(t time.Time) string {
 	return t.Format("2006-01-02 15:04:05")
 }

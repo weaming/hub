@@ -124,7 +124,7 @@ func (w *WebSocket) ProcessMessage() {
 		}
 
 		if err != nil {
-			log.Println(err)
+			log.Println("parse ws msg fail:", err)
 			continue
 		}
 

@@ -23,7 +23,7 @@ func UnmarshalClientMessage(msg []byte, hub *Hub) (*PubRequest, error) {
 	clientMsg := &PubRequest{hub: hub}
 	err := json.Unmarshal(msg, clientMsg)
 	if err != nil {
-		log.Println(err)
+		log.Println("json unmarshal err:", err)
 		return nil, err
 	}
 	return clientMsg, nil
@@ -45,7 +45,7 @@ func (p *PubRequest) Process(ws *WebSocket) (m string, err error) {
 	switch p.Action {
 	case ActionPub:
 		message := p.Message
-		log.Printf("%+v", message)
+		log.Printf("msg => %+v", message)
 		if message == nil {
 			return "", errors.New("missing 'message' in PUB request")
 		}
